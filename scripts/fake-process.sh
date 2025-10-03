@@ -1,26 +1,44 @@
 #!/bin/bash
 
 # Colors
+RESET="\e[0m"
 MAGENTA="\e[35m"
 GREEN="\e[32m"
 YELLOW="\e[33m"
 RED="\e[31m"
-RESET="\e[0m"
+BOLD_CYAN="\e[1;96m"
 
-# Configurable UI
+# -- Configurable UI START -- #
+# Label
 LABEL="Progress"
-# FILLED_CHAR="#"
-# EMPTY_CHAR="-"
-# Make it random!
+
+# Progress Bar (Make it random!)
 filled_chars=("#" "█" "▓")
 empty_chars=("-" "·" "⋅" "✕" "╌")
-FILLED_CHAR=${filled_chars[$RANDOM % ${#filled_chars[@]}]}
-EMPTY_CHAR=${empty_chars[$RANDOM % ${#empty_chars[@]}]}
-SPINNER=( "|" "/" "-" "\\" )
-# SPINNER=( "·" "o" "O" "o" "·" )
-# SPINNER=( "⠁" "⠂" "⠄" "⠂" )
+
+# Spinner
+SPINNER_SETS=(
+  "| / - \\"
+  "· o O o ·"
+  "⠁ ⠂ ⠄ ⠂"
+  "⠋ ⠙ ⠸ ⠴ ⠦ ⠇"
+  # "⠋ ⠙ ⠸ ⠴ ⠦ ⠧ ⠇ ⠏"
+)
+
+# Multiplier for spinner speed (<1 → faster, >1 → slower)
+SPINNER_SPEED_FACTOR=1.25
+# -- Configurable UI END -- #
 
 prefix="${LABEL}: "
+FILLED_CHAR=${filled_chars[$RANDOM % ${#filled_chars[@]}]}
+EMPTY_CHAR=${empty_chars[$RANDOM % ${#empty_chars[@]}]}
+chosen="${SPINNER_SETS[$((RANDOM % ${#SPINNER_SETS[@]}))]}"
+read -ra SPINNER <<< "$chosen"
+
+# Use fixed values instead of random
+# FILLED_CHAR="#"
+# EMPTY_CHAR="-"
+# SPINNER=( "|" "/" "-" "\\" )
 
 logs=(
   "INFO: Initializing environment..."
@@ -64,7 +82,9 @@ while [ $i -lt $total ]; do
 
     # Spinner
     frame=""
-    [ $progress -lt 100 ] && frame="${SPINNER[$((frame_index % 4))]} "
+    # Calculate spinner index using bc (supports decimals)
+    spinner_index=$(echo "scale=0; $frame_index / $SPINNER_SPEED_FACTOR" | bc)
+    [ $progress -lt 100 ] && frame="${SPINNER[$((spinner_index % ${#SPINNER[@]}))]} "
 
     # Progress with percent sign as string
     progress_str="${progress}%"
@@ -90,8 +110,7 @@ while [ $i -lt $total ]; do
     tput cup 0 0
 
     # Print progress bar
-    # Wrap ONLY the bar in color, leave spinner outside
-    printf "\r%s[${MAGENTA}%s${RESET}] %s%s" "$prefix" "$bar" "$frame" "$progress_str"
+    printf "\r%s[${MAGENTA}%s${RESET}] ${BOLD_CYAN}%s${RESET}%s" "$prefix" "$bar" "$frame" "$progress_str"
     printf "\033[K\n" # clear rest of line
 
     # Print log window
